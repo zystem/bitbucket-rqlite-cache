@@ -1,0 +1,1 @@
+nim c -d:release -d:ssl --threads:on --mm:orc --out:build/bitbucket-rqlite-cache bitbucket_rqlite_cache.nim
