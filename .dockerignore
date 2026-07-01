@@ -1,0 +1,13 @@
+.git
+.github
+build
+helm
+tests
+tools
+
+.gitignore
+README.md
+
+*.log
+*.tmp
+*.tgz

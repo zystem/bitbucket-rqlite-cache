@@ -1,1 +1,2 @@
-build/
+/build/
+/bitbucket_rqlite_cache

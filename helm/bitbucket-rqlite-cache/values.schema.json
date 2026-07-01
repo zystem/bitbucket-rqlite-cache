@@ -1,0 +1,150 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "replicaCount": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "image": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "repository": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pullPolicy": {
+          "type": "string",
+          "enum": ["Always", "IfNotPresent", "Never"]
+        },
+        "tag": {
+          "type": "string"
+        }
+      },
+      "required": ["repository", "pullPolicy", "tag"]
+    },
+    "imagePullSecrets": {
+      "type": "array"
+    },
+    "nameOverride": {
+      "type": "string"
+    },
+    "fullnameOverride": {
+      "type": "string"
+    },
+    "podAnnotations": {
+      "type": "object"
+    },
+    "podLabels": {
+      "type": "object"
+    },
+    "podSecurityContext": {
+      "type": "object"
+    },
+    "securityContext": {
+      "type": "object"
+    },
+    "existingSecret": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": ["name"]
+    },
+    "env": {
+      "type": "object",
+      "additionalProperties": {
+        "type": ["string", "number", "boolean"]
+      },
+      "properties": {
+        "BITBUCKET_WORKSPACE": {
+          "type": "string"
+        },
+        "BITBUCKET_REPO_PREFIX": {
+          "type": "string"
+        },
+        "BITBUCKET_API_URL": {
+          "type": "string",
+          "minLength": 1
+        },
+        "BITBUCKET_USER": {
+          "type": "string"
+        },
+        "BITBUCKET_TOKEN": {
+          "type": "string"
+        },
+        "RQLITE_URL": {
+          "type": "string"
+        },
+        "RQLITE_USER": {
+          "type": "string"
+        },
+        "RQLITE_PASSWORD": {
+          "type": "string"
+        },
+        "SYNC_SLEEP_SECONDS": {
+          "type": ["string", "integer"],
+          "pattern": "^[0-9]+$"
+        },
+        "BITBUCKET_RATE_LIMIT_SLEEP_SECONDS": {
+          "type": ["string", "integer"],
+          "pattern": "^[0-9]+$"
+        }
+      },
+      "required": [
+        "BITBUCKET_WORKSPACE",
+        "BITBUCKET_REPO_PREFIX",
+        "BITBUCKET_API_URL",
+        "BITBUCKET_USER",
+        "BITBUCKET_TOKEN",
+        "RQLITE_URL",
+        "RQLITE_USER",
+        "RQLITE_PASSWORD",
+        "SYNC_SLEEP_SECONDS",
+        "BITBUCKET_RATE_LIMIT_SLEEP_SECONDS"
+      ]
+    },
+    "resources": {
+      "type": "object"
+    },
+    "livenessProbe": {
+      "type": "object"
+    },
+    "readinessProbe": {
+      "type": "object"
+    },
+    "nodeSelector": {
+      "type": "object"
+    },
+    "tolerations": {
+      "type": "array"
+    },
+    "affinity": {
+      "type": "object"
+    }
+  },
+  "required": [
+    "replicaCount",
+    "image",
+    "imagePullSecrets",
+    "nameOverride",
+    "fullnameOverride",
+    "podAnnotations",
+    "podLabels",
+    "podSecurityContext",
+    "securityContext",
+    "existingSecret",
+    "env",
+    "resources",
+    "livenessProbe",
+    "readinessProbe",
+    "nodeSelector",
+    "tolerations",
+    "affinity"
+  ]
+}

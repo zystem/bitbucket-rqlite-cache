@@ -1,0 +1,8 @@
+apiVersion: v2
+name: bitbucket-rqlite-cache
+description: Synchronize Bitbucket repository and branch metadata into rqlite
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+sources:
+  - https://github.com/zystem/bitbucket-rqlite-cache.git

@@ -1,27 +1,24 @@
-FROM nimlang/nim:2.2.4-alpine AS build
+FROM nimlang/nim:2.2.4-alpine AS builder
 
 WORKDIR /src
 
 RUN apk add --no-cache openssl-dev pcre-dev
 
+COPY bitbucket_rqlite_cache.nimble .
 COPY bitbucket_rqlite_cache.nim .
+COPY build.sh .
 
-RUN nim c \
-    -d:release \
-    -d:ssl \
-    --mm:orc \
-    --threads:on \
-    -o:/out/bitbucket_rqlite_cache \
-    bitbucket_rqlite_cache.nim
+RUN NIMBLE_DIR=/tmp/nimble sh build.sh && \
+    mkdir -p /out && \
+    cp build/bitbucket-rqlite-cache /out/bitbucket-rqlite-cache
 
 
 FROM alpine:3.20
 
 RUN apk add --no-cache ca-certificates openssl libgcc
 
-COPY --from=build /out/bitbucket_rqlite_cache /usr/local/bin/bitbucket_rqlite_cache
+COPY --from=builder /out/bitbucket-rqlite-cache /usr/local/bin/bitbucket-rqlite-cache
 
 USER 65532:65532
 
-ENTRYPOINT ["/usr/local/bin/bitbucket_rqlite_cache"]
-CMD ["--help"]
+ENTRYPOINT ["/usr/local/bin/bitbucket-rqlite-cache"]

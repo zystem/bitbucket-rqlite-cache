@@ -1,44 +1,47 @@
-import std/[base64, httpclient, json, os, parseopt, strformat, strutils, times]
+import std/[base64, httpclient, json, os, strformat, strutils, times]
 
 const
   TimeoutMs = 30_000
-  BitbucketApiBase = "https://api.bitbucket.org/2.0/repositories"
+  DefaultBitbucketApiBase = "https://api.bitbucket.org/2.0/repositories"
 
 type
-  Config = object
-    workspace: string
-    repoPrefix: string
-    rqliteUrl: string
-    sleepSeconds: int
-    rateLimitSleepSeconds: int
-    once: bool
+  Config* = object
+    workspace*: string
+    repoPrefix*: string
+    bitbucketApiUrl*: string
+    rqliteUrl*: string
+    sleepSeconds*: int
+    rateLimitSleepSeconds*: int
+    once*: bool
 
 proc usage() =
   echo """
 Usage:
-  bitbucket_rqlite_cache [options]
+  bitbucket-rqlite-cache [--once]
+
+Required environment variables:
+  BITBUCKET_WORKSPACE                 Bitbucket workspace, required
+  BITBUCKET_USER                      Bitbucket username or email, required
+  BITBUCKET_TOKEN                     Bitbucket app password, required
+  RQLITE_URL                          rqlite URL, required
+
+Optional environment variables:
+  BITBUCKET_REPO_PREFIX               Repository prefix filter, default: empty string
+  BITBUCKET_API_URL                   Bitbucket repositories API URL, default: https://api.bitbucket.org/2.0/repositories
+  SYNC_SLEEP_SECONDS                  Sleep between repositories, default: 1
+  BITBUCKET_RATE_LIMIT_SLEEP_SECONDS  Sleep after Bitbucket HTTP 429, default: 60
+  RQLITE_USER                         rqlite username, default: empty string
+  RQLITE_PASSWORD                     rqlite password, default: empty string
 
 Options:
-  --workspace NAME             Bitbucket workspace, default: empty string
-  --repo-prefix PREFIX         Repository prefix filter, default: empty string
-  --rqlite-url URL             rqlite URL, default: http://127.0.0.1:4001
-  --sleep SECONDS              Sleep between repositories, default: 1
-  --rate-limit-sleep SECONDS   Sleep after Bitbucket HTTP 429, default: 60
-  --once                       Run one update cycle and exit
-  --help                       Show this help
-
-Environment:
-  export BITBUCKET_USER='user@example.com'
-  export BITBUCKET_TOKEN='bitbucket-app-password'
-
-  export RQLITE_USER='admin'
-  export RQLITE_PASSWORD='secret'
+  --once  Run one update cycle and exit
+  --help  Show this help
 
 Examples:
-  ./bitbucket_rqlite_cache --once
-  ./bitbucket_rqlite_cache --repo-prefix ''
-  ./bitbucket_rqlite_cache --repo-prefix sl-
-  ./bitbucket_rqlite_cache --rate-limit-sleep 120
+  BITBUCKET_WORKSPACE=test RQLITE_URL=http://rqlite:4001 ./bitbucket-rqlite-cache
+  BITBUCKET_REPO_PREFIX=sl- ./bitbucket-rqlite-cache
+  ./bitbucket-rqlite-cache --once
+  BITBUCKET_RATE_LIMIT_SLEEP_SECONDS=120 ./bitbucket-rqlite-cache
 """
   quit(0)
 
@@ -46,13 +49,30 @@ proc die(msg: string) =
   stderr.writeLine("ERROR: " & msg)
   quit(1)
 
+proc requiredEnv(name: string): string =
+  result = getEnv(name)
+  if result.len == 0:
+    die(name & " is not set")
+
+proc parseIntValue*(name, value: string, defaultValue: int): int =
+  if value.len == 0:
+    return defaultValue
+
+  try:
+    result = parseInt(value)
+  except ValueError:
+    die(name & " must be an integer")
+
+proc intEnv(name: string, defaultValue: int): int =
+  parseIntValue(name, getEnv(name), defaultValue)
+
 proc nowUtc(): string =
   getTime().utc.format("yyyy-MM-dd'T'HH:mm:ss'Z'")
 
-proc basicAuthHeader(user, password: string): string =
+proc basicAuthHeader*(user, password: string): string =
   "Basic " & encode(user & ":" & password)
 
-proc normalizedUrl(url: string): string =
+proc normalizedUrl*(url: string): string =
   result = url
   while result.endsWith("/"):
     result.setLen(result.len - 1)
@@ -84,7 +104,7 @@ proc bitbucketAuthHeader(): string =
 
   basicAuthHeader(user, token)
 
-proc jsonStr(node: JsonNode, key: string, defaultValue = ""): string =
+proc jsonStr*(node: JsonNode, key: string, defaultValue = ""): string =
   if node.kind == JObject and node.hasKey(key) and node[key].kind != JNull:
     return node[key].getStr(defaultValue)
   defaultValue
@@ -196,7 +216,7 @@ DO UPDATE SET
     errorMsg
   ]
 
-proc buildSaveBranchStmt(
+proc buildSaveBranchStmt*(
   cfg: Config,
   repo, branch, commitHash, commitDate, marker: string
 ): JsonNode =
@@ -261,43 +281,29 @@ WHERE workspace = ?
   ])
 
 proc parseConfig(): Config =
-  result = Config(
-    workspace: "",
-    repoPrefix: "",
-    rqliteUrl: "http://127.0.0.1:4001",
-    sleepSeconds: 1,
-    rateLimitSleepSeconds: 60,
-    once: false
-  )
+  let args = commandLineParams()
+  var once = false
 
-  var parser = initOptParser(commandLineParams())
+  if args.len > 0:
+    if args.len == 1 and args[0] in ["--help", "-h", "help"]:
+      usage()
 
-  for kind, key, value in parser.getopt():
-    case kind
-    of cmdLongOption:
-      case key
-      of "workspace":
-        result.workspace = value
-      of "repo-prefix":
-        result.repoPrefix = value
-      of "rqlite-url":
-        result.rqliteUrl = value
-      of "sleep":
-        result.sleepSeconds = parseInt(value)
-      of "rate-limit-sleep":
-        result.rateLimitSleepSeconds = parseInt(value)
-      of "once":
-        result.once = true
-      of "help":
-        usage()
+    for arg in args:
+      case arg
+      of "--once":
+        once = true
       else:
-        die("Unknown option: --" & key)
-    of cmdShortOption:
-      die("Short options are not supported: -" & key)
-    of cmdArgument:
-      die("Unexpected argument: " & key)
-    of cmdEnd:
-      discard
+        die("Command line option " & arg & " is not supported; use environment variables")
+
+  Config(
+    workspace: requiredEnv("BITBUCKET_WORKSPACE"),
+    repoPrefix: getEnv("BITBUCKET_REPO_PREFIX"),
+    bitbucketApiUrl: normalizedUrl(getEnv("BITBUCKET_API_URL", DefaultBitbucketApiBase)),
+    rqliteUrl: requiredEnv("RQLITE_URL"),
+    sleepSeconds: intEnv("SYNC_SLEEP_SECONDS", 1),
+    rateLimitSleepSeconds: intEnv("BITBUCKET_RATE_LIMIT_SLEEP_SECONDS", 60),
+    once: once
+  )
 
 proc bitbucketRequest(
   client: HttpClient,
@@ -329,7 +335,7 @@ proc bitbucketGetJson(
   parseJson(response.body)
 
 proc iterRepos(client: HttpClient, cfg: Config): seq[string] =
-  var url = &"{BitbucketApiBase}/{cfg.workspace}/?pagelen=100&fields=values.slug,next"
+  var url = &"{cfg.bitbucketApiUrl}/{cfg.workspace}/?pagelen=100&fields=values.slug,next"
 
   while url.len > 0:
     let data = bitbucketGetJson(client, cfg, url)
@@ -348,7 +354,7 @@ proc collectBranchStatements(
   repo, marker: string
 ): seq[JsonNode] =
   var url =
-    &"{BitbucketApiBase}/{cfg.workspace}/{repo}/refs/branches" &
+    &"{cfg.bitbucketApiUrl}/{cfg.workspace}/{repo}/refs/branches" &
     "?pagelen=100" &
     "&fields=values.name,values.target.hash,values.target.date,next"
 

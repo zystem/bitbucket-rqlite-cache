@@ -72,15 +72,28 @@ Requirements:
 - Nim 2.2+
 - OpenSSL development package
 
-Compile:
+Run tests:
 
 ```bash
-nim c \
-    -d:release \
-    -d:ssl \
-    --mm:orc \
-    --threads:on \
-    bitbucket_rqlite_cache.nim
+nimble test -y
+```
+
+Build release binary:
+
+```bash
+sh build.sh
+```
+
+The release binary is written to `build/bitbucket-rqlite-cache`.
+
+Full local release checks:
+
+```bash
+nimble test -y
+sh build.sh
+helm lint helm/bitbucket-rqlite-cache
+helm template bitbucket-rqlite-cache helm/bitbucket-rqlite-cache
+docker build -t bitbucket-rqlite-cache:test .
 ```
 
 ## Docker
@@ -91,12 +104,33 @@ Build image:
 docker build -t bitbucket-rqlite-cache .
 ```
 
+## Helm
+
+Install from the local chart:
+
+```bash
+helm install bitbucket-rqlite-cache ./helm/bitbucket-rqlite-cache \
+  --set env.BITBUCKET_WORKSPACE=test \
+  --set env.BITBUCKET_USER=user \
+  --set env.BITBUCKET_TOKEN=app-password \
+  --set env.RQLITE_URL=http://rqlite:4001
+```
+
+The chart can also read all environment variables from an existing Secret:
+
+```bash
+helm install bitbucket-rqlite-cache ./helm/bitbucket-rqlite-cache \
+  --set existingSecret.name=bitbucket-rqlite-cache
+```
+
 Run:
 
 ```bash
 docker run --rm \
+  -e BITBUCKET_WORKSPACE=test \
   -e BITBUCKET_USER=user \
   -e BITBUCKET_TOKEN=app-password \
+  -e RQLITE_URL=http://rqlite:4001 \
   -e RQLITE_USER=admin \
   -e RQLITE_PASSWORD=secret \
   bitbucket-rqlite-cache
@@ -104,53 +138,68 @@ docker run --rm \
 
 ## Environment variables
 
-### Bitbucket
+### Required
 
 ```bash
+export BITBUCKET_WORKSPACE='test'
 export BITBUCKET_USER='user@example.com'
 export BITBUCKET_TOKEN='bitbucket-app-password'
+export RQLITE_URL='http://rqlite:4001'
 ```
 
-### rqlite
+### Optional
 
 ```bash
+export BITBUCKET_REPO_PREFIX=''
+export BITBUCKET_API_URL='https://api.bitbucket.org/2.0/repositories'
+export SYNC_SLEEP_SECONDS='1'
+export BITBUCKET_RATE_LIMIT_SLEEP_SECONDS='60'
 export RQLITE_USER='admin'
 export RQLITE_PASSWORD='secret'
 ```
 
-## Command line options
+## Configuration
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `--workspace` | `test` | Bitbucket workspace |
-| `--repo-prefix` | *(empty)* | Synchronize only repositories with the specified prefix |
-| `--rqlite-url` | `http://127.0.0.1:4001` | rqlite HTTP endpoint |
-| `--sleep` | `1` | Delay between repositories |
-| `--rate-limit-sleep` | `60` | Delay after HTTP 429 |
-| `--once` | | Run one synchronization cycle and exit |
-| `--help` | | Show usage information |
+| Environment variable | Default | Description |
+|----------------------|---------|-------------|
+| `BITBUCKET_WORKSPACE` | required | Bitbucket workspace |
+| `BITBUCKET_REPO_PREFIX` | *(empty)* | Synchronize only repositories with the specified prefix |
+| `BITBUCKET_API_URL` | `https://api.bitbucket.org/2.0/repositories` | Bitbucket repositories API base URL; useful for e2e tests and mocks |
+| `RQLITE_URL` | required | rqlite HTTP endpoint |
+| `SYNC_SLEEP_SECONDS` | `1` | Delay between repositories |
+| `BITBUCKET_RATE_LIMIT_SLEEP_SECONDS` | `60` | Delay after HTTP 429 |
+| `BITBUCKET_USER` | required | Bitbucket username or email |
+| `BITBUCKET_TOKEN` | required | Bitbucket app password |
+| `RQLITE_USER` | *(empty)* | rqlite username |
+| `RQLITE_PASSWORD` | *(empty)* | rqlite password |
+
+## Command line flags
+
+| Flag | Description |
+|------|-------------|
+| `--once` | Run one synchronization cycle and exit |
+| `--help` | Show usage information |
 
 ## Examples
 
 Synchronize all repositories:
 
 ```bash
-./bitbucket_rqlite_cache \
-    --workspace test \
-    --rqlite-url http://rqlite:4001
+BITBUCKET_WORKSPACE=test \
+RQLITE_URL=http://rqlite:4001 \
+./build/bitbucket-rqlite-cache
 ```
 
 Synchronize only repositories starting with `dev-`:
 
 ```bash
-./bitbucket_rqlite_cache \
-    --repo-prefix dev-
+BITBUCKET_REPO_PREFIX=dev- ./build/bitbucket-rqlite-cache
 ```
 
 Run a single synchronization cycle:
 
 ```bash
-./bitbucket_rqlite_cache --once
+./build/bitbucket-rqlite-cache --once
 ```
 
 ## Example SQL queries
@@ -186,6 +235,25 @@ SELECT
 FROM repo_branches
 ORDER BY commit_date;
 ```
+
+## Release process
+
+1. Update `version` in `bitbucket_rqlite_cache.nimble`.
+2. Update `version` and `appVersion` in `helm/bitbucket-rqlite-cache/Chart.yaml`.
+3. Run the full local release checks from the Build section.
+4. Commit the release changes.
+5. Create and push a matching tag, for example:
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+Tagged releases publish:
+
+- Linux amd64 binary and SHA256 checksum to GitHub Releases
+- Docker image to `ghcr.io/<owner>/<repo>`
+- Helm chart to `oci://ghcr.io/<owner>/charts`
 
 ## License
 
