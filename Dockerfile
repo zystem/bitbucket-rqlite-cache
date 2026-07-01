@@ -13,7 +13,7 @@ RUN NIMBLE_DIR=/tmp/nimble sh build.sh && \
     cp build/bitbucket-rqlite-cache /out/bitbucket-rqlite-cache
 
 
-FROM alpine:3.20
+FROM alpine:3.24
 
 RUN apk add --no-cache ca-certificates openssl libgcc
 
