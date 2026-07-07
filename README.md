@@ -16,7 +16,7 @@ The primary goal is to reduce Bitbucket API usage by providing a local SQL cache
 - Automatic cleanup of deleted branches
 - HTTP Basic authentication support for Bitbucket
 - HTTP Basic authentication support for rqlite
-- No external Nim dependencies (stdlib only)
+- Uses `posixglob` for repository pattern matching
 
 ## Database schema
 
@@ -81,7 +81,7 @@ nimble test -y
 Build release binary:
 
 ```bash
-sh build.sh
+./build.sh
 ```
 
 The release binary is written to `build/bitbucket-rqlite-cache`.
@@ -90,7 +90,7 @@ Full local release checks:
 
 ```bash
 nimble test -y
-sh build.sh
+./build.sh
 helm lint helm/bitbucket-rqlite-cache
 helm template bitbucket-rqlite-cache helm/bitbucket-rqlite-cache
 docker build -t bitbucket-rqlite-cache:test .
@@ -150,7 +150,7 @@ export RQLITE_URL='http://rqlite:4001'
 ### Optional
 
 ```bash
-export BITBUCKET_REPO_PREFIX=''
+export BITBUCKET_REPO_PATTERNS=''
 export BITBUCKET_API_URL='https://api.bitbucket.org/2.0/repositories'
 export SYNC_SLEEP_SECONDS='1'
 export BITBUCKET_RATE_LIMIT_SLEEP_SECONDS='60'
@@ -163,7 +163,7 @@ export RQLITE_PASSWORD='secret'
 | Environment variable | Default | Description |
 |----------------------|---------|-------------|
 | `BITBUCKET_WORKSPACE` | required | Bitbucket workspace |
-| `BITBUCKET_REPO_PREFIX` | *(empty)* | Synchronize only repositories with the specified prefix |
+| `BITBUCKET_REPO_PATTERNS` | *(empty)* | Comma-separated repository glob patterns to synchronize |
 | `BITBUCKET_API_URL` | `https://api.bitbucket.org/2.0/repositories` | Bitbucket repositories API base URL; useful for e2e tests and mocks |
 | `RQLITE_URL` | required | rqlite HTTP endpoint |
 | `SYNC_SLEEP_SECONDS` | `1` | Delay between repositories |
@@ -190,11 +190,15 @@ RQLITE_URL=http://rqlite:4001 \
 ./build/bitbucket-rqlite-cache
 ```
 
-Synchronize only repositories starting with `dev-`:
+Synchronize only repositories matching one of the configured patterns:
 
 ```bash
-BITBUCKET_REPO_PREFIX=dev- ./build/bitbucket-rqlite-cache
+BITBUCKET_REPO_PATTERNS='dev-*,ops-*' ./build/bitbucket-rqlite-cache
 ```
+
+Pattern lists are parsed with `posixglob.parseGlobPatterns()` and each item uses
+POSIX glob syntax. The comma is not part of the glob syntax; it separates list
+items before matching.
 
 Run a single synchronization cycle:
 

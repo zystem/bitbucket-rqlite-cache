@@ -2,6 +2,7 @@
 set -eu
 
 nim c -r -d:ssl --threads:on --mm:orc \
+  --path:../nim-posixglob/src \
   --nimcache:build/nimcache \
   --out:build/t_core \
   tests/t_core.nim
@@ -12,6 +13,7 @@ nim c --threads:on --mm:orc \
   tools/e2e_mock_server.nim
 
 nim c -d:ssl --threads:on --mm:orc \
+  --path:../nim-posixglob/src \
   --nimcache:build/nimcache \
   --out:build/bitbucket-rqlite-cache-e2e \
   bitbucket_rqlite_cache.nim
@@ -33,7 +35,7 @@ done
 
 BITBUCKET_API_URL=http://127.0.0.1:18081/2.0/repositories \
 BITBUCKET_WORKSPACE=test \
-BITBUCKET_REPO_PREFIX=dev- \
+BITBUCKET_REPO_PATTERNS='dev-*' \
 BITBUCKET_USER=user@example.com \
 BITBUCKET_TOKEN=app-password \
 RQLITE_URL=http://127.0.0.1:18081 \

@@ -31,7 +31,7 @@ existingSecret:
 # OR
 env:
   BITBUCKET_WORKSPACE: ""
-  BITBUCKET_REPO_PREFIX: ""
+  BITBUCKET_REPO_PATTERNS: ""
   BITBUCKET_API_URL: "https://api.bitbucket.org/2.0/repositories"
   BITBUCKET_USER: ""
   BITBUCKET_TOKEN: ""

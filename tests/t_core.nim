@@ -7,6 +7,19 @@ suite "configuration parsing helpers":
     check parseIntValue("SYNC_SLEEP_SECONDS", "", 3) == 3
     check parseIntValue("SYNC_SLEEP_SECONDS", "42", 3) == 42
 
+  test "parses comma-separated repository glob patterns":
+    check parseRepoPatterns("") == newSeq[string]()
+    check parseRepoPatterns("dev-*, ops-*, ,repo-?") == @["dev-*", "ops-*", "repo-?"]
+
+  test "matches repositories with POSIX glob patterns":
+    check repoMatchesPatterns("dev-api", newSeq[string]())
+    check repoMatchesPatterns("dev-api", @["dev-*"])
+    check repoMatchesPatterns("ops-tool", @["dev-*", "ops-*"])
+    check repoMatchesPatterns("repo-a", @["repo-[ab]"])
+    check repoMatchesPatterns("repo-x", @["repo-[!ab]"])
+    check not repoMatchesPatterns("prod-api", @["dev-*", "ops-*"])
+    check not repoMatchesPatterns("repo-aa", @["repo-?"])
+
 suite "HTTP helpers":
   test "builds basic auth header":
     check basicAuthHeader("user", "token") == "Basic dXNlcjp0b2tlbg=="

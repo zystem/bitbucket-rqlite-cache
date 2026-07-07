@@ -43,11 +43,14 @@ jobs:
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libssl-dev
 
+      - name: Install Nim dependencies
+        run: nimble install -y https://github.com/zystem/nim-posixglob
+
       - name: Run tests
-        run: nimble test -y
+        run: ./tests/run.sh
 
       - name: Build binary
-        run: sh build.sh
+        run: ./build.sh
 
       - name: Prepare binary artifact
         run: |
@@ -186,4 +189,3 @@ jobs:
           files: dist/*
           fail_on_unmatched_files: true
           generate_release_notes: true
-

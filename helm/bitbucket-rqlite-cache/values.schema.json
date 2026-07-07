@@ -65,7 +65,7 @@
         "BITBUCKET_WORKSPACE": {
           "type": "string"
         },
-        "BITBUCKET_REPO_PREFIX": {
+        "BITBUCKET_REPO_PATTERNS": {
           "type": "string"
         },
         "BITBUCKET_API_URL": {
@@ -98,7 +98,7 @@
       },
       "required": [
         "BITBUCKET_WORKSPACE",
-        "BITBUCKET_REPO_PREFIX",
+        "BITBUCKET_REPO_PATTERNS",
         "BITBUCKET_API_URL",
         "BITBUCKET_USER",
         "BITBUCKET_TOKEN",

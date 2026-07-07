@@ -1,4 +1,5 @@
 import std/[base64, httpclient, json, os, strformat, strutils, times]
+import posixglob
 
 const
   TimeoutMs = 30_000
@@ -7,7 +8,7 @@ const
 type
   Config* = object
     workspace*: string
-    repoPrefix*: string
+    repoPatterns*: seq[string]
     bitbucketApiUrl*: string
     rqliteUrl*: string
     sleepSeconds*: int
@@ -26,7 +27,7 @@ Required environment variables:
   RQLITE_URL                          rqlite URL, required
 
 Optional environment variables:
-  BITBUCKET_REPO_PREFIX               Repository prefix filter, default: empty string
+  BITBUCKET_REPO_PATTERNS             Comma-separated repository glob patterns, default: empty string
   BITBUCKET_API_URL                   Bitbucket repositories API URL, default: https://api.bitbucket.org/2.0/repositories
   SYNC_SLEEP_SECONDS                  Sleep between repositories, default: 1
   BITBUCKET_RATE_LIMIT_SLEEP_SECONDS  Sleep after Bitbucket HTTP 429, default: 60
@@ -39,7 +40,7 @@ Options:
 
 Examples:
   BITBUCKET_WORKSPACE=test RQLITE_URL=http://rqlite:4001 ./bitbucket-rqlite-cache
-  BITBUCKET_REPO_PREFIX=sl- ./bitbucket-rqlite-cache
+  BITBUCKET_REPO_PATTERNS='sl-*,ops-*' ./bitbucket-rqlite-cache
   ./bitbucket-rqlite-cache --once
   BITBUCKET_RATE_LIMIT_SLEEP_SECONDS=120 ./bitbucket-rqlite-cache
 """
@@ -65,6 +66,15 @@ proc parseIntValue*(name, value: string, defaultValue: int): int =
 
 proc intEnv(name: string, defaultValue: int): int =
   parseIntValue(name, getEnv(name), defaultValue)
+
+proc parseRepoPatterns*(value: string): seq[string] =
+  parseGlobPatterns(value)
+
+proc repoMatchesPatterns*(repo: string, patterns: seq[string]): bool =
+  if patterns.len == 0:
+    return true
+
+  globMatchAny(patterns, repo)
 
 proc nowUtc(): string =
   getTime().utc.format("yyyy-MM-dd'T'HH:mm:ss'Z'")
@@ -297,7 +307,7 @@ proc parseConfig(): Config =
 
   Config(
     workspace: requiredEnv("BITBUCKET_WORKSPACE"),
-    repoPrefix: getEnv("BITBUCKET_REPO_PREFIX"),
+    repoPatterns: parseRepoPatterns(getEnv("BITBUCKET_REPO_PATTERNS")),
     bitbucketApiUrl: normalizedUrl(getEnv("BITBUCKET_API_URL", DefaultBitbucketApiBase)),
     rqliteUrl: requiredEnv("RQLITE_URL"),
     sleepSeconds: intEnv("SYNC_SLEEP_SECONDS", 1),
@@ -343,7 +353,7 @@ proc iterRepos(client: HttpClient, cfg: Config): seq[string] =
     if data.kind == JObject and data.hasKey("values"):
       for item in data["values"]:
         let repo = jsonStr(item, "slug")
-        if repo.startsWith(cfg.repoPrefix):
+        if repoMatchesPatterns(repo, cfg.repoPatterns):
           result.add(repo)
 
     url = jsonStr(data, "next")
