@@ -162,7 +162,7 @@ jobs:
 
     steps:
       - name: Download binary artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: bitbucket-rqlite-cache-linux-amd64
           path: dist
