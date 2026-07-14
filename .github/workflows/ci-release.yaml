@@ -60,7 +60,7 @@ jobs:
           sha256sum dist/bitbucket-rqlite-cache-linux-amd64 > dist/bitbucket-rqlite-cache-linux-amd64.sha256
 
       - name: Upload binary artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: bitbucket-rqlite-cache-linux-amd64
           path: dist/*
