@@ -81,7 +81,7 @@ nimble test -y
 Build release binary:
 
 ```bash
-./build.sh
+nimble buildRelease -y
 ```
 
 The release binary is written to `build/bitbucket-rqlite-cache`.
@@ -90,7 +90,7 @@ Full local release checks:
 
 ```bash
 nimble test -y
-./build.sh
+nimble buildRelease -y
 helm lint helm/bitbucket-rqlite-cache
 helm template bitbucket-rqlite-cache helm/bitbucket-rqlite-cache
 docker build -t bitbucket-rqlite-cache:test .

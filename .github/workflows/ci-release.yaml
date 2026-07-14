@@ -47,10 +47,10 @@ jobs:
         run: nimble install -y https://github.com/zystem/nim-posixglob
 
       - name: Run tests
-        run: ./tests/run.sh
+        run: nimble test -y
 
       - name: Build binary
-        run: ./build.sh
+        run: nimble buildRelease -y
 
       - name: Prepare binary artifact
         run: |

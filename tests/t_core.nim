@@ -1,6 +1,6 @@
 import std/[json, unittest]
 
-import ../bitbucket_rqlite_cache
+import ../src/bitbucket_rqlite_cache
 
 suite "configuration parsing helpers":
   test "parses integer values":

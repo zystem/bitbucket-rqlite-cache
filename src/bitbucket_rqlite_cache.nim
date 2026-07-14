@@ -1,3 +1,5 @@
+## Synchronizes Bitbucket repository and branch metadata into rqlite.
+
 import std/[base64, httpclient, json, os, strformat, strutils, times]
 import posixglob
 
