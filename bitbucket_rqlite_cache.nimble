@@ -1,5 +1,5 @@
 # Package
-version       = "0.1.0"
+version       = "0.1.1"
 author        = "zystem"
 description   = "Synchronize Bitbucket repository and branch metadata into rqlite"
 license       = "MIT"

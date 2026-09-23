@@ -474,7 +474,13 @@ proc main() =
   initDb(rqliteClient, cfg)
 
   while true:
-    updateOnce(bitbucketClient, rqliteClient, cfg)
+    try:
+      updateOnce(bitbucketClient, rqliteClient, cfg)
+    except CatchableError as e:
+      stderr.writeLine(&"ERROR: update cycle failed: {e.msg}")
+      if cfg.once:
+        quit(1)
+      sleep(cfg.rateLimitSleepSeconds * 1000)
 
     if cfg.once:
       break
