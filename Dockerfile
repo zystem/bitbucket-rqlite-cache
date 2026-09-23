@@ -18,6 +18,7 @@ FROM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cab
 RUN apk add --no-cache ca-certificates openssl libgcc
 
 COPY --from=builder /out/bitbucket-rqlite-cache /usr/local/bin/bitbucket-rqlite-cache
+COPY LICENSE /usr/share/licenses/bitbucket-rqlite-cache/
 
 USER 65532:65532
 

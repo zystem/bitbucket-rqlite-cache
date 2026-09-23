@@ -18,6 +18,7 @@ steps:
       - mkdir -p dist
       - cp build/bitbucket-rqlite-cache dist/bitbucket-rqlite-cache-linux-amd64
       - chmod +x dist/bitbucket-rqlite-cache-linux-amd64
+      - cp LICENSE dist/
       - sha256sum dist/bitbucket-rqlite-cache-linux-amd64 > dist/bitbucket-rqlite-cache-linux-amd64.sha256
     depends_on:
       - build
@@ -28,6 +29,7 @@ steps:
   helm:
     image: alpine/helm:3.15.4@sha256:105741fa6621ed9a3ea944066de78bb27d4b9bb93a56ce8e7cb4d621e1e4bbf2
     commands:
+      - cp LICENSE helm/bitbucket-rqlite-cache/LICENSE
       - helm lint helm/bitbucket-rqlite-cache
       - >
         helm template bitbucket-rqlite-cache helm/bitbucket-rqlite-cache
