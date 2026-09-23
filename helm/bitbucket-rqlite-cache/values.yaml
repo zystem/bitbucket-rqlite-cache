@@ -3,7 +3,7 @@ replicaCount: 1
 image:
   repository: ghcr.io/zystem/bitbucket-rqlite-cache
   pullPolicy: IfNotPresent
-  tag: ""
+  tag: "@sha256:407c663e0e6e63e2d98bbcd8589bca096a6254172c15542b8afada9c7ddf0c64"
 
 imagePullSecrets: []
 nameOverride: ""
