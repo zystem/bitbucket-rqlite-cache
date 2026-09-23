@@ -96,6 +96,20 @@ helm template bitbucket-rqlite-cache helm/bitbucket-rqlite-cache
 docker build -t bitbucket-rqlite-cache:test .
 ```
 
+## Renovate
+
+Renovate runs in Woodpecker for the `renovate` cron job and can also be started
+manually. To enable it:
+
+1. Add a repository secret named `renovate_token` containing a GitHub token
+   with permission to create branches and pull requests. Allow the secret for
+   the `cron` and `manual` events.
+2. In the Woodpecker repository settings, create an enabled cron job named
+   `renovate` on the `main` branch (for example, with the `@daily` schedule).
+
+The cron schedule itself is stored by Woodpecker and cannot be declared in
+`.woodpecker.yaml`.
+
 ## Docker
 
 Build image:

@@ -94,3 +94,16 @@ steps:
     when:
       - event: tag
         ref: refs/tags/v*
+
+  renovate:
+    image: renovate/renovate:latest
+    commands:
+      - renovate "$CI_REPO"
+    environment:
+      RENOVATE_PLATFORM: github
+      RENOVATE_TOKEN:
+        from_secret: renovate_token
+    when:
+      - event: cron
+        cron: renovate
+      - event: manual
