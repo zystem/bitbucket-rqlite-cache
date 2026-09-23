@@ -1,6 +1,6 @@
 steps:
   build:
-    image: nimlang/nim:2.2.4-alpine
+    image: nimlang/nim:2.2.4-alpine@sha256:47a9afd5e2d02f6a48fa13235462cb7356c4a04f7705689829f15b29d3fd8c4b
     commands:
       - apk add --no-cache gcc musl-dev openssl-dev pcre-dev git
       - git config --global --add safe.directory "$CI_WORKSPACE"
@@ -13,7 +13,7 @@ steps:
       - event: tag
 
   package_release:
-    image: alpine:3.24
+    image: alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6
     commands:
       - mkdir -p dist
       - cp build/bitbucket-rqlite-cache dist/bitbucket-rqlite-cache-linux-amd64
@@ -26,7 +26,7 @@ steps:
         ref: refs/tags/v*
 
   helm:
-    image: alpine/helm:3.15.4
+    image: alpine/helm:3.15.4@sha256:105741fa6621ed9a3ea944066de78bb27d4b9bb93a56ce8e7cb4d621e1e4bbf2
     commands:
       - helm lint helm/bitbucket-rqlite-cache
       - >
@@ -43,7 +43,7 @@ steps:
       - event: tag
 
   publish_helm:
-    image: alpine/helm:3.15.4
+    image: alpine/helm:3.15.4@sha256:105741fa6621ed9a3ea944066de78bb27d4b9bb93a56ce8e7cb4d621e1e4bbf2
     environment:
       GHCR_TOKEN:
         from_secret: ghcr_token
@@ -57,7 +57,7 @@ steps:
         ref: refs/tags/v*
 
   publish_image:
-    image: woodpeckerci/plugin-docker-buildx:5.2.0
+    image: woodpeckerci/plugin-docker-buildx:5.2.0@sha256:084256ffef7144d1bf1724ca4d5d5c50528b43bacafc7b163bffe29e77dfa3d8
     settings:
       registry: ghcr.io
       repo: ghcr.io/${CI_REPO}
@@ -78,7 +78,7 @@ steps:
         ref: refs/tags/v*
 
   publish_release:
-    image: woodpeckerci/plugin-release:0.3.1
+    image: woodpeckerci/plugin-release:0.3.1@sha256:3fa3a8de080151bbe5c9647b31793a46cc2cfc489741bf48835265edb85ca739
     settings:
       api-key:
         from_secret: github_token
@@ -96,7 +96,7 @@ steps:
         ref: refs/tags/v*
 
   renovate:
-    image: renovate/renovate:latest
+    image: renovate/renovate:latest@sha256:253ff2045cd2c8cdd2d07770a60bf8d3dd590ba8e82d85fd4ed381e43dccad9b
     commands:
       - renovate "$CI_REPO"
     environment:
