@@ -27,7 +27,7 @@ steps:
         ref: refs/tags/v*
 
   helm:
-    image: alpine/helm:3.15.4@sha256:105741fa6621ed9a3ea944066de78bb27d4b9bb93a56ce8e7cb4d621e1e4bbf2
+    image: alpine/helm:4.3.0@sha256:a6cf54599ccb99d90cf0712b30f03fdb3cab062e6b94e0418cc4db7e8a1464b2
     commands:
       - cp LICENSE helm/bitbucket-rqlite-cache/LICENSE
       - helm lint helm/bitbucket-rqlite-cache
@@ -45,7 +45,7 @@ steps:
       - event: tag
 
   publish_helm:
-    image: alpine/helm:3.15.4@sha256:105741fa6621ed9a3ea944066de78bb27d4b9bb93a56ce8e7cb4d621e1e4bbf2
+    image: alpine/helm:4.3.0@sha256:a6cf54599ccb99d90cf0712b30f03fdb3cab062e6b94e0418cc4db7e8a1464b2
     environment:
       GHCR_TOKEN:
         from_secret: github_token
