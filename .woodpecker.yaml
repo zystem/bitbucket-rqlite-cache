@@ -59,7 +59,7 @@ steps:
         ref: refs/tags/v*
 
   publish_image:
-    image: woodpeckerci/plugin-docker-buildx:5.2.2@sha256:ccb9072d4f51dc6ec106b364c6806c6647c93c59594f2d10d121f94b0566591f
+    image: woodpeckerci/plugin-docker-buildx:6.1.2@sha256:d26b69cbe748b8a219c707e7889d5ffb3f9214bc3c480c30fe857ff85954267c
     settings:
       registry: ghcr.io
       repo: ghcr.io/${CI_REPO}
