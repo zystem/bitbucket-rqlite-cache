@@ -27,7 +27,7 @@ steps:
         ref: refs/tags/v*
 
   helm:
-    image: alpine/helm:3.22.1@sha256:8191701ad1f82ee3695c87211fcbfe6d7b1bb7df92ac1c8de9ccdb0995a6a2c1
+    image: alpine/helm:4.3.1@sha256:e3f8d5c462d75470fbb1fce79ad5c20063657096d1f98c0fcea869e2600e2e5e
     commands:
       - cp LICENSE helm/bitbucket-rqlite-cache/LICENSE
       - helm lint helm/bitbucket-rqlite-cache
@@ -45,7 +45,7 @@ steps:
       - event: tag
 
   publish_helm:
-    image: alpine/helm:3.22.1@sha256:8191701ad1f82ee3695c87211fcbfe6d7b1bb7df92ac1c8de9ccdb0995a6a2c1
+    image: alpine/helm:4.3.1@sha256:e3f8d5c462d75470fbb1fce79ad5c20063657096d1f98c0fcea869e2600e2e5e
     environment:
       GHCR_TOKEN:
         from_secret: github_token
@@ -59,7 +59,7 @@ steps:
         ref: refs/tags/v*
 
   publish_image:
-    image: woodpeckerci/plugin-docker-buildx:5.2.2@sha256:ccb9072d4f51dc6ec106b364c6806c6647c93c59594f2d10d121f94b0566591f
+    image: woodpeckerci/plugin-docker-buildx:6.1.2@sha256:d26b69cbe748b8a219c707e7889d5ffb3f9214bc3c480c30fe857ff85954267c
     settings:
       registry: ghcr.io
       repo: ghcr.io/${CI_REPO}
@@ -80,7 +80,7 @@ steps:
         ref: refs/tags/v*
 
   publish_release:
-    image: woodpeckerci/plugin-release:0.3.1@sha256:3fa3a8de080151bbe5c9647b31793a46cc2cfc489741bf48835265edb85ca739
+    image: woodpeckerci/plugin-release:0.3.2@sha256:a045e18674319a2e3e534b5b674c100a0f01a9fc718dd03ab6732155b228e61b
     settings:
       api-key:
         from_secret: github_token
@@ -98,7 +98,7 @@ steps:
         ref: refs/tags/v*
 
   renovate:
-    image: renovate/renovate:latest@sha256:253ff2045cd2c8cdd2d07770a60bf8d3dd590ba8e82d85fd4ed381e43dccad9b
+    image: renovate/renovate:latest@sha256:c33150ec6407624a9399a2d827fd125becafdbe4519d7584488cbdd17f99081e
     commands:
       - renovate "$CI_REPO"
     environment:
