@@ -98,7 +98,7 @@ steps:
         ref: refs/tags/v*
 
   renovate:
-    image: renovate/renovate:latest@sha256:1ffc71775d95bd2233bf5a867744c5a92d845b5928dee93f5bb22ced956e4e38
+    image: renovate/renovate:latest@sha256:e698014d6e64a8b8e096b624120dc4aa14b1cf0e5754fd86e3c38887de63f18a
     commands:
       - renovate "$CI_REPO"
     environment:
