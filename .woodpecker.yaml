@@ -13,7 +13,7 @@ steps:
       - event: tag
 
   package_release:
-    image: alpine:3.24@sha256:c6b073f8e9e58d881f6ffba6ebf3b9ebd60b9e7d6e8337018c0e68bb5c356873
+    image: alpine:3.24@sha256:3f4d6b32e26703c6082839234f43769d5046b3ac7c910033911d1e71d8cd630a
     commands:
       - mkdir -p dist
       - cp build/bitbucket-rqlite-cache dist/bitbucket-rqlite-cache-linux-amd64
@@ -80,7 +80,7 @@ steps:
         ref: refs/tags/v*
 
   publish_release:
-    image: woodpeckerci/plugin-release:0.3.3@sha256:26c8dec7b8b384d44b1c44cd0b041648feae80e0ba506da6f74a0a0b6ad05538
+    image: woodpeckerci/plugin-release:1.0.0@sha256:13277e795ac97a41e0e89a0b001e31a561baff912dcfe272a267bee0dda08fa1
     settings:
       api-key:
         from_secret: github_token
@@ -98,7 +98,7 @@ steps:
         ref: refs/tags/v*
 
   renovate:
-    image: renovate/renovate:latest@sha256:1ffc71775d95bd2233bf5a867744c5a92d845b5928dee93f5bb22ced956e4e38
+    image: renovate/renovate:latest@sha256:e698014d6e64a8b8e096b624120dc4aa14b1cf0e5754fd86e3c38887de63f18a
     commands:
       - renovate "$CI_REPO"
     environment:
