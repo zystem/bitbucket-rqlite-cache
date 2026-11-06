@@ -80,7 +80,7 @@ steps:
         ref: refs/tags/v*
 
   publish_release:
-    image: woodpeckerci/plugin-release:0.3.2@sha256:a045e18674319a2e3e534b5b674c100a0f01a9fc718dd03ab6732155b228e61b
+    image: woodpeckerci/plugin-release:1.0.0@sha256:13277e795ac97a41e0e89a0b001e31a561baff912dcfe272a267bee0dda08fa1
     settings:
       api-key:
         from_secret: github_token
