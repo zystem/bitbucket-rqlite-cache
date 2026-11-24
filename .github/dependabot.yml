@@ -1,0 +1,16 @@
+version: 2
+updates:
+  # Actions in .github/workflows, pinned by commit SHA.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  # Dockerfile: the nimlang/nim builder (also used by CI for the tests) and
+  # the alpine runtime image.
+  # tools/helm/Dockerfile: the alpine/helm image CI checks the chart in.
+  - package-ecosystem: docker
+    directories:
+      - /
+      - /tools/helm
+    schedule:
+      interval: weekly

@@ -1,0 +1,228 @@
+name: CI and release
+
+# Every push to main and every pull request: tests, release binary, chart
+# lint, amd64 image build (nothing is published).
+# A tag v*: the same, then the image (amd64 and arm64), the chart and the
+# GitHub release are published.
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  IMAGE_NAME: ghcr.io/${{ github.repository }}
+  IS_RELEASE: ${{ startsWith(github.ref, 'refs/tags/v') }}
+
+jobs:
+  test:
+    name: Test and build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check that the tag matches the versions
+        if: env.IS_RELEASE == 'true'
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          nimble_version="$(sed -n 's/^version *= *"\(.*\)"/\1/p' bitbucket_rqlite_cache.nimble)"
+          chart_version="$(sed -n 's/^version: *//p' helm/bitbucket-rqlite-cache/Chart.yaml)"
+          app_version="$(sed -n 's/^appVersion: *"\{0,1\}\([^"]*\)"\{0,1\}/\1/p' helm/bitbucket-rqlite-cache/Chart.yaml)"
+          echo "tag $version, nimble $nimble_version, chart $chart_version, appVersion $app_version"
+          test "$version" = "$nimble_version"
+          test "$version" = "$chart_version"
+          test "$version" = "$app_version"
+
+      - name: Run tests and build the release binary
+        run: |
+          # The builder image of the Dockerfile, which Dependabot updates.
+          NIM_IMAGE="$(sed -n 's/^FROM \(nimlang\/nim:[^ ]*\) AS builder$/\1/p' Dockerfile)"
+          test -n "$NIM_IMAGE"
+          echo "Nim image: $NIM_IMAGE"
+          docker run --rm -v "$PWD:/src" -w /src "$NIM_IMAGE" sh -euc '
+            apk add --no-cache gcc musl-dev openssl-dev pcre-dev git
+            git config --global --add safe.directory /src
+            nimble install -y https://github.com/zystem/nim-posixglob
+            nimble test -y
+            nimble buildRelease -y
+            chown -R '"$(id -u):$(id -g)"' build
+          '
+
+      - name: Prepare release files
+        run: |
+          mkdir -p dist
+          cp build/bitbucket-rqlite-cache dist/bitbucket-rqlite-cache-linux-amd64
+          chmod +x dist/bitbucket-rqlite-cache-linux-amd64
+          cp LICENSE dist/
+          (cd dist && sha256sum bitbucket-rqlite-cache-linux-amd64 > bitbucket-rqlite-cache-linux-amd64.sha256)
+
+      - name: Upload release files
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: bitbucket-rqlite-cache-linux-amd64
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7
+
+  helm:
+    name: Helm chart
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Choose the Helm image
+        run: |
+          # tools/helm/Dockerfile holds the image, so that Dependabot updates it.
+          HELM_IMAGE="$(sed -n 's/^FROM //p' tools/helm/Dockerfile)"
+          test -n "$HELM_IMAGE"
+          echo "HELM_IMAGE=$HELM_IMAGE" >> "$GITHUB_ENV"
+          echo "Helm image: $HELM_IMAGE"
+
+      - name: Lint, render and package the chart
+        run: |
+          cp LICENSE helm/bitbucket-rqlite-cache/LICENSE
+          docker run --rm -v "$PWD:/src" -w /src --user "$(id -u):$(id -g)" -e HOME=/tmp \
+            --entrypoint sh "$HELM_IMAGE" -euc '
+            helm lint helm/bitbucket-rqlite-cache
+            helm template bitbucket-rqlite-cache helm/bitbucket-rqlite-cache \
+              --namespace automation \
+              --set env.BITBUCKET_WORKSPACE=test \
+              --set env.BITBUCKET_USER=user@example.com \
+              --set env.BITBUCKET_TOKEN=app-password \
+              --set env.RQLITE_URL=http://rqlite:4001 >/dev/null
+            helm package helm/bitbucket-rqlite-cache --destination build/helm
+          '
+
+      - name: Publish the chart to ghcr.io
+        if: env.IS_RELEASE == 'true'
+        env:
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHART_REPOSITORY: oci://ghcr.io/${{ github.repository_owner }}/charts
+        run: |
+          docker run --rm -v "$PWD:/src" -w /src --user "$(id -u):$(id -g)" -e HOME=/tmp \
+            -e GHCR_USER -e GHCR_TOKEN -e CHART_REPOSITORY \
+            --entrypoint sh "$HELM_IMAGE" -euc '
+              printf "%s" "$GHCR_TOKEN" | helm registry login ghcr.io --username "$GHCR_USER" --password-stdin
+              helm push build/helm/*.tgz "$CHART_REPOSITORY"
+            '
+
+  image:
+    name: Container image
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    needs:
+      - test
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up QEMU for arm64
+        if: env.IS_RELEASE == 'true'
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+        with:
+          platforms: arm64
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Log in to ghcr.io
+        if: env.IS_RELEASE == 'true'
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Choose platforms and tags
+        id: plan
+        run: |
+          if [ "$IS_RELEASE" = "true" ]; then
+            version="${GITHUB_REF_NAME#v}"
+            {
+              echo "platforms=linux/amd64,linux/arm64"
+              echo "tags<<EOF"
+              echo "$IMAGE_NAME:$version"
+              echo "$IMAGE_NAME:v$version"
+              echo "$IMAGE_NAME:latest"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+          else
+            {
+              echo "platforms=linux/amd64"
+              echo "tags=$IMAGE_NAME:ci"
+            } >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build (and on a tag, push) the image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: ${{ steps.plan.outputs.platforms }}
+          push: ${{ env.IS_RELEASE == 'true' }}
+          tags: ${{ steps.plan.outputs.tags }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.licenses=MIT
+
+  release:
+    name: GitHub release
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    needs:
+      - test
+      - helm
+      - image
+    permissions:
+      contents: write
+    steps:
+      - name: Download release files
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: bitbucket-rqlite-cache-linux-amd64
+          path: dist
+
+      - name: Check release files
+        run: |
+          ls -l dist
+          test -s dist/bitbucket-rqlite-cache-linux-amd64
+          test -s dist/LICENSE
+          (cd dist && sha256sum -c bitbucket-rqlite-cache-linux-amd64.sha256)
+
+      - name: Publish the release
+        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          files: dist/*
+          fail_on_unmatched_files: true
+          generate_release_notes: true
